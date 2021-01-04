@@ -1,29 +1,22 @@
 {% extends "page.html" %}
-
-<!-- Set list of predicates for display -->
-{% set displayed_relationships = [
-    'http://purl.org/dc/terms/created',
-    'http://purl.org/dc/terms/modified',
-    'http://www.w3.org/2004/02/skos/core#prefLabel',
-    'http://www.w3.org/2004/02/skos/core#altLabel',
-    'http://www.w3.org/2004/02/skos/core#definition',
-    'http://www.w3.org/2000/01/rdf-schema#comment',
-    'http://purl.org/dc/terms/source',
-    'http://purl.org/dc/terms/contributor',
-
-    ]         
-%}
-
+{% from "_format.html" import format with context -%}
 {% block content %}
+
 <h1>Concept</h1>
+
+{# status #}
+{% if "http://www.opengis.net/def/metamodel/ogc-na/status" in concept.annotations.keys() %} {# we have a status marker #}
+  <div class="status {{ utils.get_status_label(concept.annotations["http://www.opengis.net/def/metamodel/ogc-na/status"][1]) }}"></div>
+{% endif %}
+
 <dl>
   <dt>Preferred Label</dt>
   <dd><h2>{{ concept.prefLabel }}</h2></dd>
   <dt>URI</dt>
-  <dd><a href="{{ uri }}">{{ uri }}</a></dd>
+  <dd><a href="{{ utils.get_content_uri(uri) }}">{{ uri }}</a></dd>
   {%  if vocab_uri is not none %}
   <dt>Within Vocab</dt>
-  <dd><a href="{{ url_for('object', uri=vocab_uri) }}">{{ vocab_title }}</a></dd>
+  <dd><a href="{{ utils.get_content_uri(vocab_uri) }}">{{ vocab_title }}</a></dd>
   {% endif %}
 </dl>
 <table class="metadata concept">
@@ -43,7 +36,7 @@
   {% endif %}
   <tr>
     <th><a href="http://www.w3.org/2004/02/skos/core#definition">Definition</a></th>
-    <td>{{ concept.definition }}</td>
+      <td>{{ concept.definition|safe }}</td>
   </tr>
   {% if concept.related_instances|length > 0 %}
     {% for k, v in concept.related_instances.items() %}
@@ -51,27 +44,34 @@
       <th><a href="{{ k }}">{{ v["label"] }}</a></th>
       <td>
         {%  for inst in v["instances"] %}
-          {% if LOCAL_URLS -%}
-            <a href="{{ url_for('object') }}?uri={{ inst[0] }}">{{ inst[1] }}</a><br />
-          {% else %}
-            <a href="{{ inst[0] }}">{{ inst[1] }}</a><br />
-          {% endif -%}
+            <a href="{{ utils.get_content_uri(inst[0]) }}">{{ inst[1] }}</a><br />
         {% endfor %}
       </td>
     </tr>
     {% endfor %}
 {% endif %}
-</table>
-<div class="altprof">
-  <h3>Alternate Profiles</h3>
-  {% if LOCAL_URLS -%}
-    {% if vocab_uri is not none %}
-      <p>Different views and formats of this concept are here: <a href="{{ url_for('object') }}?vocab_uri={{ vocab_uri }}&uri={{ uri }}&_profile=alt">Alternate Profiles</a>.</p>
+{% if concept.annotations|length > 0 %}
+  {% for k, v in concept.annotations.items() %}
+  <tr>
+    <th><a href="{{ k }}">{{ v[0] }}</a></th>
+    {%  if v|length == 3 %}
+    <td><a href="{{ v[1] }}">{{ v[2] }}</a></td>
     {% else %}
-      <p>Different views and formats of this concept are here: <a href="{{ url_for('object') }}?uri={{ uri }}&_profile=alt">Alternate Profiles</a>.</p>
+      <td>{{ v[1] }}</td>
     {% endif %}
-  {% else -%}
-    <p>Different views and formats of this concept are here: <a href="{{ uri }}&_profile=alt">Alternate Profiles</a>.</p>
-  {% endif -%}
-</div>
+  </tr>
+  {% endfor %}
+{% endif %}
+{% if concept.other_properties is not none %}
+  {% for prop in concept.other_properties %}
+    <tr>
+      <th><a href="{{ prop.url }}">{{ prop.label }}</a></th>
+      <td>
+        {% if prop.value[:4] == 'http' %}<a href="{{ prop.value }}">{{ prop.value }}</a>{% else %}{{ prop.value }}{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+{% endif %}
+</table>
+{% include 'alt_links.html' %}
 {% endblock %}

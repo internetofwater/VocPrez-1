@@ -1,4 +1,4 @@
-__version__ = "2.0"
+__version__ = "2.5"
 
-from vocprez import _config as config
-import vocprez.source as source
+from . import source
+from . import utils
